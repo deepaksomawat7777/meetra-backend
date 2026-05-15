@@ -15,12 +15,28 @@ dotenv.config();
 
 const app = express();
 const httpServer = createServer(app);
-const allowedOrigins = ["http://localhost:4200", "https://meetra-00.web.app", "http://192.168.150.102:4200"];
+
+app.use(cors({
+  origin: [
+    "http://localhost:4200",
+    "https://meetra-00.web.app"
+  ],
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  credentials: true
+}));
+
 const io = new Server(httpServer, {
-  cors: { origin: allowedOrigins, credentials: true }
+  cors: {
+    origin: [
+      "http://localhost:4200",
+      "https://meetra-00.web.app"
+    ],
+    methods: ["GET", "POST"]
+  }
 });
 
 const server = http.createServer(app);
+
 
 // Map to track active users (userId -> socketId)
 const connectedUsers = new Map();
