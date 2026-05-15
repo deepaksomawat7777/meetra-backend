@@ -16,30 +16,36 @@ dotenv.config();
 const app = express();
 const httpServer = createServer(app);
 
-// 🔥 Allowed origins
+// ========================
+// Allowed Origins
+// ========================
 const allowedOrigins = [
   "http://localhost:4200",
   "https://meetra-00.web.app"
 ];
 
-// 🔥 CORS FIX (IMPORTANT FOR RENDER + BROWSER PRE-FLIGHT)
+// ========================
+// CORS CONFIG (FINAL FIX)
+// ========================
 app.use(cors({
   origin: function (origin, callback) {
+    // allow requests with no origin (mobile apps, postman)
     if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, origin); // return origin explicitly
-    } else {
-      callback(new Error("Not allowed by CORS"));
+      return callback(null, true);
     }
+    return callback(new Error("CORS not allowed"));
   },
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
-  credentials: false   // ⚠️ keep false since you are NOT using cookies
+  credentials: false
 }));
 
-// 🔥 handle preflight requests
-app.options("*", cors());
+// ⚠️ DO NOT use app.options("*") in Express 5
+// So we are NOT adding wildcard preflight handler
 
-// Socket.io setup
+// ========================
+// Socket.io Setup
+// ========================
 const io = new Server(httpServer, {
   cors: {
     origin: allowedOrigins,
@@ -47,7 +53,9 @@ const io = new Server(httpServer, {
   }
 });
 
-// connected users map
+// ========================
+// Connected Users Map
+// ========================
 const connectedUsers = new Map();
 
 io.on("connection", (socket) => {
@@ -67,35 +75,48 @@ io.on("connection", (socket) => {
   });
 });
 
-// inject io
+// ========================
+// Inject io into routes
+// ========================
 app.use((req, res, next) => {
   req.io = io;
   req.connectedUsers = connectedUsers;
   next();
 });
 
-// middleware
+// ========================
+// Middleware
+// ========================
 app.use(express.json({ limit: "5mb" }));
 
-// routes
+// ========================
+// Routes
+// ========================
 app.use("/api", userRoutes);
 app.use("/api", friendRoutes);
 app.use("/api", messageRoutes);
 app.use("/api", postRoutes);
 app.use("/api", notificationRoutes);
 
+// ========================
 // MongoDB
+// ========================
 mongoose.connect(process.env.MONGO_URI, { dbName: "meetra" })
   .then(() => console.log("✅ MongoDB Connected"))
   .catch((err) => console.log("❌ MongoDB Error:", err.message));
 
-// test route
+// ========================
+// Test Route
+// ========================
 app.get("/", (req, res) => {
   res.send("Meetra API is working ✅");
 });
 
-// start server
+// ========================
+// Start Server
+// ========================
 const PORT = process.env.PORT || 4000;
+
 httpServer.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
