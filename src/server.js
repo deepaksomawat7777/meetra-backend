@@ -1,4 +1,5 @@
 import express from "express";
+import http from "http";
 import mongoose from "mongoose";
 import cors from "cors";
 import dotenv from "dotenv";
@@ -19,12 +20,14 @@ const io = new Server(httpServer, {
   cors: { origin: allowedOrigins, credentials: true }
 });
 
+const server = http.createServer(app);
+
 // Map to track active users (userId -> socketId)
 const connectedUsers = new Map();
 
 io.on("connection", (socket) => {
   console.log("Socket connected:", socket.id);
-  
+
   socket.on("register", (userId) => {
     connectedUsers.set(userId, socket.id);
     console.log("User registered:", userId, "->", socket.id);
