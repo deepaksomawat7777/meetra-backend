@@ -1,10 +1,10 @@
 import express from "express";
-import http from "http";
 import mongoose from "mongoose";
 import cors from "cors";
 import dotenv from "dotenv";
 import { createServer } from "http";
 import { Server } from "socket.io";
+
 import userRoutes from "./routes/userRoutes.js";
 import friendRoutes from "./routes/friendRoutes.js";
 import messageRoutes from "./routes/messageRoutes.js";
@@ -16,31 +16,28 @@ dotenv.config();
 const app = express();
 const httpServer = createServer(app);
 
+// ✅ Allowed origins define karo
+const allowedOrigins = [
+  "http://localhost:4200",
+  "https://meetra-00.web.app"
+];
+
+// ✅ CORS middleware (sirf ek baar)
 app.use(cors({
-  origin: [
-    "http://localhost:4200",
-    "https://meetra-00.web.app"
-  ],
+  origin: allowedOrigins,
   methods: ["GET", "POST", "PUT", "DELETE"],
   credentials: true
 }));
 
+// ✅ Socket.io setup
 const io = new Server(httpServer, {
   cors: {
-    origin: [
-      "http://localhost:4200",
-      "https://meetra-00.web.app"
-    ],
+    origin: allowedOrigins,
     methods: ["GET", "POST"]
   }
 });
 
-// just testing
-
-const server = http.createServer(app);
-
-
-// Map to track active users (userId -> socketId)
+// Map to track active users
 const connectedUsers = new Map();
 
 io.on("connection", (socket) => {
@@ -69,7 +66,6 @@ app.use((req, res, next) => {
 });
 
 // middleware
-app.use(cors({ origin: allowedOrigins, credentials: true }));
 app.use(express.json({ limit: "5mb" }));
 
 // routes
@@ -85,8 +81,12 @@ mongoose.connect(process.env.MONGO_URI, { dbName: "meetra" })
   .catch((err) => console.log("❌ MongoDB Error:", err.message));
 
 // test route
-app.get("/", (req, res) => { res.send("Meetra API is working ✅"); });
+app.get("/", (req, res) => {
+  res.send("Meetra API is working ✅");
+});
 
 // server start
 const PORT = process.env.PORT || 4000;
-httpServer.listen(PORT, () => { console.log(`🚀 Server & Socket.io running on port ${PORT}`); });
+httpServer.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+});
