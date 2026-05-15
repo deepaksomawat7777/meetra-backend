@@ -16,20 +16,30 @@ dotenv.config();
 const app = express();
 const httpServer = createServer(app);
 
-// ✅ Allowed origins define karo
+// 🔥 Allowed origins
 const allowedOrigins = [
   "http://localhost:4200",
   "https://meetra-00.web.app"
 ];
 
-// ✅ CORS middleware (sirf ek baar)
+// 🔥 CORS FIX (IMPORTANT FOR RENDER + BROWSER PRE-FLIGHT)
 app.use(cors({
-  origin: allowedOrigins,
-  methods: ["GET", "POST", "PUT", "DELETE"],
-  credentials: false
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, origin); // return origin explicitly
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: false   // ⚠️ keep false since you are NOT using cookies
 }));
 
-// ✅ Socket.io setup
+// 🔥 handle preflight requests
+app.options("*", cors());
+
+// Socket.io setup
 const io = new Server(httpServer, {
   cors: {
     origin: allowedOrigins,
@@ -37,7 +47,7 @@ const io = new Server(httpServer, {
   }
 });
 
-// Map to track active users
+// connected users map
 const connectedUsers = new Map();
 
 io.on("connection", (socket) => {
@@ -45,7 +55,6 @@ io.on("connection", (socket) => {
 
   socket.on("register", (userId) => {
     connectedUsers.set(userId, socket.id);
-    console.log("User registered:", userId, "->", socket.id);
   });
 
   socket.on("disconnect", () => {
@@ -58,7 +67,7 @@ io.on("connection", (socket) => {
   });
 });
 
-// Inject io into routes
+// inject io
 app.use((req, res, next) => {
   req.io = io;
   req.connectedUsers = connectedUsers;
@@ -75,7 +84,7 @@ app.use("/api", messageRoutes);
 app.use("/api", postRoutes);
 app.use("/api", notificationRoutes);
 
-// MongoDB connection
+// MongoDB
 mongoose.connect(process.env.MONGO_URI, { dbName: "meetra" })
   .then(() => console.log("✅ MongoDB Connected"))
   .catch((err) => console.log("❌ MongoDB Error:", err.message));
@@ -85,7 +94,7 @@ app.get("/", (req, res) => {
   res.send("Meetra API is working ✅");
 });
 
-// server start
+// start server
 const PORT = process.env.PORT || 4000;
 httpServer.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
